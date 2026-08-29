@@ -4,6 +4,7 @@ on:
     paths: ['.github/workflows/list-gemini-models-auto.yml']
 permissions:
   contents: read
+# trigger
 jobs:
   list:
     runs-on: ubuntu-latest
