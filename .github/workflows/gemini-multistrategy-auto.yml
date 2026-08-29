@@ -1,0 +1,54 @@
+name: Gemini 3-strategy autonomy benchmark
+
+on:
+  push:
+    paths:
+      - '.github/workflows/gemini-multistrategy-auto.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate scenarios
+        run: python generate_scenarios.py
+      - name: Select 12 representative scenarios
+        run: |
+          python - <<'PY'
+          import json
+          s=json.load(open('scenarios.json'))
+          idx=[0,11,22,33,44,55,66,77,88,99,9,53]
+          json.dump([s[i] for i in idx],open('scenarios_multi.json','w'),ensure_ascii=False,indent=2)
+          PY
+      - name: Run 3-strategy benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.6-flash
+          GEMINI_DELAY_SECONDS: '10'
+          SCENARIO_FILE: scenarios_multi.json
+          OUT_DIR: results_multi
+        run: python run_multistrategy.py
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f results_multi/summary.json ]; then
+            echo '## Gemini 3-strategy benchmark' >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat results_multi/summary.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-multistrategy-results
+          path: results_multi/
+          retention-days: 14
