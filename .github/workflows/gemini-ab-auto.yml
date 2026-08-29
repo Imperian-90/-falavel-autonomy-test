@@ -1,0 +1,67 @@
+name: Gemini autonomy A/B auto benchmark
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/gemini-ab-auto.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate anonymized scenarios
+        run: python generate_scenarios.py
+
+      - name: Select 20 representative scenarios
+        run: |
+          python - <<'PY'
+          import json, random
+          from pathlib import Path
+          p = Path('scenarios.json')
+          data = json.loads(p.read_text(encoding='utf-8'))
+          rng = random.Random(20260829)
+          selected = [data[i] for i in sorted(rng.sample(range(len(data)), min(20, len(data))))]
+          p.write_text(json.dumps(selected, ensure_ascii=False, indent=2), encoding='utf-8')
+          print(f'Selected {len(selected)} scenarios')
+          PY
+
+      - name: Run benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.5-flash
+          GEMINI_DELAY_SECONDS: "6.2"
+          GEMINI_MAX_RETRIES: "2"
+        run: python run_benchmark.py
+
+      - name: Add summary
+        if: always()
+        run: |
+          if [ -f results/summary.json ]; then
+            echo "## Gemini autonomy benchmark" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat results/summary.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-autonomy-results
+          path: results/
+          if-no-files-found: warn
+          retention-days: 14
