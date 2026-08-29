@@ -1,0 +1,51 @@
+name: Gemini autonomy A/B v2 auto benchmark
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/gemini-ab-v2-auto.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate scenarios
+        run: python generate_scenarios.py
+      - name: Select 15 representative scenarios
+        run: |
+          python - <<'PY'
+          import json, random
+          from pathlib import Path
+          p=Path('scenarios.json'); data=json.loads(p.read_text(encoding='utf-8'))
+          rng=random.Random(20260829)
+          sel=[data[i] for i in sorted(rng.sample(range(len(data)), min(15,len(data))))]
+          p.write_text(json.dumps(sel,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(len(sel))
+          PY
+      - name: Run Gemini 3.6 Flash benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.6-flash
+          GEMINI_DELAY_SECONDS: "13.2"
+        run: python run_benchmark_v2.py
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f results_v2/summary.json ]; then cat results_v2/summary.json >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-autonomy-v2-results
+          path: results_v2/
+          retention-days: 14
