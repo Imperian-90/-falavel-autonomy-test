@@ -4,6 +4,7 @@ on:
     paths: ['.github/workflows/gemini-multistrategy-25-auto.yml']
 permissions:
   contents: read
+# trigger
 jobs:
   benchmark:
     runs-on: ubuntu-latest
