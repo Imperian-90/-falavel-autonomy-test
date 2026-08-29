@@ -1,0 +1,40 @@
+name: Gemini 3.5 Flash Lite control benchmark
+on:
+  push:
+    paths: ['.github/workflows/gemini-multistrategy-35lite-auto.yml']
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python generate_scenarios.py
+      - name: Select 8 scenarios
+        run: |
+          python - <<'PY'
+          import json
+          s=json.load(open('scenarios.json'))
+          idx=[0,12,24,36,48,59,77,99]
+          json.dump([s[i] for i in idx],open('scenarios_35lite.json','w'),ensure_ascii=False,indent=2)
+          PY
+      - name: Run benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.5-flash-lite
+          GEMINI_DELAY_SECONDS: '6'
+          SCENARIO_FILE: scenarios_35lite.json
+          OUT_DIR: results_35lite
+        run: python run_multistrategy_fast.py
+      - if: always()
+        run: cat results_35lite/summary.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gemini-multistrategy-35lite-results
+          path: results_35lite/
+          retention-days: 14
