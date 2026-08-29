@@ -1,0 +1,58 @@
+name: Gemini autonomy A/B benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Gemini model
+        required: true
+        default: gemini-3.5-flash
+      delay_seconds:
+        description: Delay between requests (free-tier friendly)
+        required: true
+        default: "6.2"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate anonymized scenarios
+        run: python generate_scenarios.py
+
+      - name: Run 100-scenario benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ inputs.model }}
+          GEMINI_DELAY_SECONDS: ${{ inputs.delay_seconds }}
+        run: python run_benchmark.py
+
+      - name: Add summary
+        if: always()
+        run: |
+          if [ -f results/summary.json ]; then
+            echo "## Gemini autonomy benchmark" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat results/summary.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-autonomy-results
+          path: results/
+          if-no-files-found: warn
+          retention-days: 14
