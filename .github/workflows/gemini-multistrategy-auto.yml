@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
 
+# trigger: 2026-08-29
 jobs:
   benchmark:
     runs-on: ubuntu-latest
