@@ -1,0 +1,41 @@
+name: Gemini 2.5 Flash 3-strategy benchmark
+on:
+  push:
+    paths: ['.github/workflows/gemini-multistrategy-25-auto.yml']
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python generate_scenarios.py
+      - name: Select 12 scenarios
+        run: |
+          python - <<'PY'
+          import json
+          s=json.load(open('scenarios.json'))
+          idx=[0,11,22,33,44,55,66,77,88,99,9,53]
+          json.dump([s[i] for i in idx],open('scenarios_multi_25.json','w'),ensure_ascii=False,indent=2)
+          PY
+      - name: Run benchmark
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-2.5-flash
+          GEMINI_DELAY_SECONDS: '8'
+          SCENARIO_FILE: scenarios_multi_25.json
+          OUT_DIR: results_multi_25
+        run: python run_multistrategy_fast.py
+      - name: Summary
+        if: always()
+        run: cat results_multi_25/summary.json || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gemini-multistrategy-25-results
+          path: results_multi_25/
+          retention-days: 14
