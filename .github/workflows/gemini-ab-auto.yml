@@ -65,3 +65,5 @@ jobs:
           path: results/
           if-no-files-found: warn
           retention-days: 14
+
+# trigger: 2026-08-29T18:00Z
