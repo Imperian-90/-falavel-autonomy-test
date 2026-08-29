@@ -9,11 +9,11 @@ on:
 permissions:
   contents: read
 
-# trigger: 2026-08-29
+# model: 3.7 flash
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,24 +32,24 @@ jobs:
       - name: Run 3-strategy benchmark
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: gemini-3.6-flash
-          GEMINI_DELAY_SECONDS: '10'
+          GEMINI_MODEL: gemini-3.7-flash
+          GEMINI_DELAY_SECONDS: '8'
           SCENARIO_FILE: scenarios_multi.json
-          OUT_DIR: results_multi
-        run: python run_multistrategy.py
+          OUT_DIR: results_multi_37
+        run: python run_multistrategy_fast.py
       - name: Summary
         if: always()
         run: |
-          if [ -f results_multi/summary.json ]; then
-            echo '## Gemini 3-strategy benchmark' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f results_multi_37/summary.json ]; then
+            echo '## Gemini 3.7 3-strategy benchmark' >> "$GITHUB_STEP_SUMMARY"
             echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            cat results_multi/summary.json >> "$GITHUB_STEP_SUMMARY"
+            cat results_multi_37/summary.json >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gemini-multistrategy-results
-          path: results_multi/
+          name: gemini-multistrategy-37-results
+          path: results_multi_37/
           retention-days: 14
