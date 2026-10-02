@@ -22,7 +22,7 @@ conn = psycopg2.connect(dsn)
 cur = conn.cursor()
 
 cur.execute(
-    "select imperian1.aws_smoke_test_current(%s::uuid,%s,%s,10)",
+    "select imperian1.aws_smoke_test_current(%s::uuid,%s,%s,50)",
     (
         os.environ["FALAVEL_CAMPAIGN_ID"],
         os.environ["FALAVEL_CHECKPOINT"],
@@ -35,9 +35,9 @@ conn.commit()
 cur.close()
 conn.close()
 
-print("FALAVEL_SMOKE_SUMMARY " + json.dumps(result, sort_keys=True))
+print("FALAVEL_SOAK_SUMMARY " + json.dumps(result, sort_keys=True))
 
 if not result.get("passed", False):
     raise SystemExit(2)
 
-print("FALAVEL_10_TURN_SMOKE_PASS")
+print("FALAVEL_50_TURN_SOAK_PASS")
