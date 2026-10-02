@@ -1,0 +1,12 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - pip install --quiet psycopg2-binary
+
+  build:
+    commands:
+      - python falavel_smoke.py
